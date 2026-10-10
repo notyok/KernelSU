@@ -31,20 +31,29 @@ jobs:
           pnpm install || true
           pnpm build || true
 
-      - name: Patch UAPI, Version & Anti-Detection
+      - name: Complete Fix (UAPI 4 + Tabs Unlock + Detection Bypass + Jailbreak)
         working-directory: manager
         run: |
-          # 1. Version Code sync
+          # 1. Version Code sync (35171 driver matching)
           sed -i 's/val defaultVersionCode = .*/val defaultVersionCode = 35171/g' build.gradle.kts || true
           sed -i 's/versionCode = .*/versionCode = 35171/g' app/build.gradle.kts || true
           sed -i 's/val ksuVersionCode = .*/val ksuVersionCode = 35171/g' app/build.gradle.kts || true
 
-          # 2. Force UAPI version to 4
-          find . -type f \( -name "*.kt" -o -name "*.java" -o -name "*.h" -o -name "*.c" \) -exec sed -i 's/KERNEL_UAPI_VERSION = 2/KERNEL_UAPI_VERSION = 4/g' {} + || true
-          find . -type f \( -name "*.kt" -o -name "*.java" \) -exec sed -i 's/val ksuUapiVersion = 2/val ksuUapiVersion = 4/g' {} + || true
-          find . -type f \( -name "*.kt" -o -name "*.java" \) -exec sed -i 's/MIN_KERNEL_UAPI_VERSION = 2/MIN_KERNEL_UAPI_VERSION = 4/g' {} + || true
+          # 2. Force UAPI to 4 everywhere (Native C/C++ aur Kotlin me)
+          find . -type f \( -name "*.kt" -o -name "*.java" -o -name "*.h" -o -name "*.c" -o -name "*.cpp" \) \
+            -exec sed -i 's/KERNEL_UAPI_VERSION = 2/KERNEL_UAPI_VERSION = 4/g' {} + || true
+          find . -type f \( -name "*.kt" -o -name "*.java" \) \
+            -exec sed -i 's/val ksuUapiVersion = 2/val ksuUapiVersion = 4/g' {} + || true
+          find . -type f \( -name "*.kt" -o -name "*.java" \) \
+            -exec sed -i 's/MIN_KERNEL_UAPI_VERSION = 2/MIN_KERNEL_UAPI_VERSION = 4/g' {} + || true
+          find . -type f \( -name "*.kt" -o -name "*.java" \) \
+            -exec sed -i 's/const val KERNEL_UAPI_VERSION = .*/const val KERNEL_UAPI_VERSION = 4/g' {} + || true
 
-          # 3. Rename internal manager strings for detection bypass
+          # 3. Superuser aur Module tabs ko force unlock karna (hide checks bypass)
+          find app/src/main/ -type f -name "*.kt" -exec sed -i 's/isNeedUpdate/false/g' {} + || true
+          find app/src/main/ -type f -name "*.kt" -exec sed -i 's/isUapiMismatch/false/g' {} + || true
+
+          # 4. Anti-detection strings rename
           find . -type f \( -name "*.kt" -o -name "*.java" \) -exec sed -i 's/"KernelSU"/"Grok"/g' {} + || true
           find . -type f \( -name "*.kt" -o -name "*.java" \) -exec sed -i 's/"me.weishu.kernelsu"/"ai.x.grok"/g' {} + || true
 
@@ -56,12 +65,12 @@ jobs:
             -PKSU_PACKAGE_NAME="ai.x.grok" \
             -PKSU_NAME="Grok" \
             -PKSU_VERSION_CODE=35171 \
-            -PKSU_VERSION_NAME="v3.5.171" \
+            -PKSU_VERSION_NAME="v3.5.171-Jailbreak" \
             --stacktrace
 
       - name: Upload Grok APK
         uses: actions/upload-artifact@v4
         with:
-          name: Grok-Manager-Bypass
+          name: Grok-Ultimate-Manager
           path: manager/app/build/outputs/apk/release/*.apk
           
