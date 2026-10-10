@@ -1,0 +1,45 @@
+name: Build Grok Manager
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Setup Android NDK
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r26b
+
+      - name: Build WebUI
+        working-directory: manager
+        run: |
+          npm install -g pnpm
+          pnpm install || true
+          pnpm build || true
+
+      - name: Build Grok Manager Release APK
+        working-directory: manager
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease -PKSU_PACKAGE_NAME="ai.x.grok" -PKSU_NAME="Grok" --stacktrace
+
+      - name: Upload Grok APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Grok-Manager-APK
+          path: manager/app/build/outputs/apk/release/*.apk
+          
