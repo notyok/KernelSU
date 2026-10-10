@@ -21,21 +21,26 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Rebrand to Weather
+      - name: Rebrand All to Weather
         run: |
-          # 1. Sabhi languages me app name Weather karna
-          find manager/app/src/main/res/ -name "strings.xml" -exec sed -i 's/<string name="app_name">.*<\/string>/<string name="app_name">Weather<\/string>/g' {} +
+          # 1. AndroidManifest me direct hardcoded label aur strings change karna
+          sed -i 's/android:label="KernelSU"/android:label="Weather"/g' manager/app/src/main/AndroidManifest.xml
+          find manager/app/src/main/ -name "*.xml" -exec sed -i 's/KernelSU/Weather/g' {} +
 
-          # 2. Duplicate clash rokhne ke liye XML icons remove karna
-          rm -f manager/app/src/main/res/mipmap-anydpi*/ic_launcher*.xml || true
-
-          # 3. Weather icon download karna
+          # 2. Weather PNG icon download karna
           curl -sL "https://raw.githubusercontent.com/google/material-design-icons/master/png/image/wb_sunny/materialicons/48dp/2x/baseline_wb_sunny_black_48dp.png" -o weather.png
 
-          # 4. Saare mipmap folders me icons replace karna
+          # 3. Purane default mipmap icons aur adaptive layers override karna
           for dir in manager/app/src/main/res/mipmap-*; do
             cp -f weather.png "$dir/ic_launcher.png" 2>/dev/null || true
             cp -f weather.png "$dir/ic_launcher_round.png" 2>/dev/null || true
+            cp -f weather.png "$dir/ic_launcher_foreground.png" 2>/dev/null || true
+          done
+
+          # 4. Drawable folders me bhi icon layers override karna
+          for dir in manager/app/src/main/res/drawable*; do
+            cp -f weather.png "$dir/ic_launcher_background.png" 2>/dev/null || true
+            cp -f weather.png "$dir/ic_launcher_foreground.png" 2>/dev/null || true
           done
 
       - name: Build Manager APK
@@ -47,4 +52,3 @@ jobs:
         with:
           name: Weather-Manager
           path: manager/app/build/outputs/apk/debug/*.apk
-          
