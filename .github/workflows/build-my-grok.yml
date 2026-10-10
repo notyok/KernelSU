@@ -24,6 +24,12 @@ jobs:
         with:
           ndk-version: r26b
 
+      - name: Generate Custom Keystore
+        run: |
+          keytool -genkey -v -keystore manager/app/grok.jks -alias grok -keyalg RSA -keysize 2048 -validity 10000 \
+            -storepass password123 -keypass password123 \
+            -dname "CN=Grok, OU=Grok, O=Grok, L=Mumbai, ST=Maharashtra, C=IN"
+
       - name: Build WebUI
         working-directory: manager
         run: |
@@ -35,11 +41,25 @@ jobs:
         working-directory: manager
         run: |
           chmod +x gradlew
-          ./gradlew assembleRelease -PKSU_PACKAGE_NAME="ai.x.grok" -PKSU_NAME="Grok" --stacktrace
+          ./gradlew assembleRelease \
+            -PKSU_PACKAGE_NAME="ai.x.grok" \
+            -PKSU_NAME="Grok" \
+            -PKEYSTORE_FILE="grok.jks" \
+            -PKEYSTORE_PASSWORD="password123" \
+            -PKEY_ALIAS="grok" \
+            -PKEY_PASSWORD="password123" \
+            --stacktrace
+
+      - name: Sign APK with apksigner
+        run: |
+          APK_PATH=$(find manager/app/build/outputs/apk/release/ -name "*.apk" | head -n 1)
+          $ANDROID_HOME/build-tools/34.0.0/apksigner sign --ks manager/app/grok.jks --ks-pass pass:password123 --ks-key-alias grok --key-pass pass:password123 --v2-signing-enabled true --v3-signing-enabled false "$APK_PATH"
+          echo "=== SIGNATURE DETAILS ==="
+          $ANDROID_HOME/build-tools/34.0.0/apksigner verify --verbose --print-certs "$APK_PATH"
 
       - name: Upload Grok APK
         uses: actions/upload-artifact@v4
         with:
-          name: Grok-Manager-APK
+          name: Grok-Manager-Signed
           path: manager/app/build/outputs/apk/release/*.apk
           
