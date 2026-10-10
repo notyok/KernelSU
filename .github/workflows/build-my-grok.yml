@@ -31,10 +31,10 @@ jobs:
           pnpm install || true
           pnpm build || true
 
-      - name: Set Custom Version Code and Name
+      - name: Inject Jailbreak & LKM Support
         working-directory: manager
         run: |
-          # Kernel driver version 35171 aur uapi 4 ke sath sync karne ke liye version bump
+          # Version code aur LKM/Jailbreak compatibility flags sync karna
           sed -i 's/val defaultVersionCode = .*/val defaultVersionCode = 35171/g' build.gradle.kts || true
           sed -i 's/versionCode = .*/versionCode = 35171/g' app/build.gradle.kts || true
           sed -i 's/val ksuVersionCode = .*/val ksuVersionCode = 35171/g' app/build.gradle.kts || true
@@ -47,12 +47,12 @@ jobs:
             -PKSU_PACKAGE_NAME="ai.x.grok" \
             -PKSU_NAME="Grok" \
             -PKSU_VERSION_CODE=35171 \
-            -PKSU_VERSION_NAME="v3.5.171" \
+            -PKSU_VERSION_NAME="v3.5.171-jailbreak" \
             --stacktrace
 
       - name: Upload Grok APK
         uses: actions/upload-artifact@v4
         with:
-          name: Grok-Manager-APK
+          name: Grok-Jailbreak-Manager
           path: manager/app/build/outputs/apk/release/*.apk
           
