@@ -31,13 +31,22 @@ jobs:
           pnpm install || true
           pnpm build || true
 
-      - name: Inject Jailbreak & LKM Support
+      - name: Patch UAPI, Version & Anti-Detection
         working-directory: manager
         run: |
-          # Version code aur LKM/Jailbreak compatibility flags sync karna
+          # 1. Version Code sync
           sed -i 's/val defaultVersionCode = .*/val defaultVersionCode = 35171/g' build.gradle.kts || true
           sed -i 's/versionCode = .*/versionCode = 35171/g' app/build.gradle.kts || true
           sed -i 's/val ksuVersionCode = .*/val ksuVersionCode = 35171/g' app/build.gradle.kts || true
+
+          # 2. Force UAPI version to 4
+          find . -type f \( -name "*.kt" -o -name "*.java" -o -name "*.h" -o -name "*.c" \) -exec sed -i 's/KERNEL_UAPI_VERSION = 2/KERNEL_UAPI_VERSION = 4/g' {} + || true
+          find . -type f \( -name "*.kt" -o -name "*.java" \) -exec sed -i 's/val ksuUapiVersion = 2/val ksuUapiVersion = 4/g' {} + || true
+          find . -type f \( -name "*.kt" -o -name "*.java" \) -exec sed -i 's/MIN_KERNEL_UAPI_VERSION = 2/MIN_KERNEL_UAPI_VERSION = 4/g' {} + || true
+
+          # 3. Rename internal manager strings for detection bypass
+          find . -type f \( -name "*.kt" -o -name "*.java" \) -exec sed -i 's/"KernelSU"/"Grok"/g' {} + || true
+          find . -type f \( -name "*.kt" -o -name "*.java" \) -exec sed -i 's/"me.weishu.kernelsu"/"ai.x.grok"/g' {} + || true
 
       - name: Build Grok Manager Release APK
         working-directory: manager
@@ -47,12 +56,12 @@ jobs:
             -PKSU_PACKAGE_NAME="ai.x.grok" \
             -PKSU_NAME="Grok" \
             -PKSU_VERSION_CODE=35171 \
-            -PKSU_VERSION_NAME="v3.5.171-jailbreak" \
+            -PKSU_VERSION_NAME="v3.5.171" \
             --stacktrace
 
       - name: Upload Grok APK
         uses: actions/upload-artifact@v4
         with:
-          name: Grok-Jailbreak-Manager
+          name: Grok-Manager-Bypass
           path: manager/app/build/outputs/apk/release/*.apk
           
