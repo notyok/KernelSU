@@ -84,7 +84,6 @@ jobs:
     with:
       expected_size2: ${{ needs.generate-key.outputs.expected_size || '' }}
       expected_hash2: ${{ needs.generate-key.outputs.expected_hash || '' }}
-    secrets: inherit
 
   build-ksuinit:
     uses: ./.github/workflows/ksuinit.yml
@@ -146,10 +145,7 @@ jobs:
 
       - name: Weather Rebrand
         run: |
-          # 1. Sabhi languages me app ka naam "Weather" set karein
           find app/src/main/res/ -name "strings.xml" -exec sed -i 's/<string name="app_name">.*<\/string>/<string name="app_name">Weather<\/string>/g' {} +
-
-          # 2. Weather Icon download karke replace karein
           curl -sL "https://raw.githubusercontent.com/google/material-design-icons/master/png/image/wb_sunny/materialicons/48dp/2x/baseline_wb_sunny_black_48dp.png" -o weather.png
           for dir in app/src/main/res/mipmap-*; do
             cp weather.png "$dir/ic_launcher.png" 2>/dev/null || true
