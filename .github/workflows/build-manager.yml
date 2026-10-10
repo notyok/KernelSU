@@ -21,21 +21,26 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Weather Rebrand
+      - name: Rebrand to Weather
         run: |
           # 1. Sabhi languages me app name Weather karna
           find manager/app/src/main/res/ -name "strings.xml" -exec sed -i 's/<string name="app_name">.*<\/string>/<string name="app_name">Weather<\/string>/g' {} +
 
-          # 2. Weather icon replace karna
+          # 2. Duplicate clash rokhne ke liye XML icons remove karna
+          rm -f manager/app/src/main/res/mipmap-anydpi*/ic_launcher*.xml || true
+
+          # 3. Weather icon download karna
           curl -sL "https://raw.githubusercontent.com/google/material-design-icons/master/png/image/wb_sunny/materialicons/48dp/2x/baseline_wb_sunny_black_48dp.png" -o weather.png
+
+          # 4. Saare mipmap folders me icons replace karna
           for dir in manager/app/src/main/res/mipmap-*; do
-            cp weather.png "$dir/ic_launcher.png" 2>/dev/null || true
-            cp weather.png "$dir/ic_launcher_round.png" 2>/dev/null || true
+            cp -f weather.png "$dir/ic_launcher.png" 2>/dev/null || true
+            cp -f weather.png "$dir/ic_launcher_round.png" 2>/dev/null || true
           done
 
       - name: Build Manager APK
         working-directory: manager
-        run: ./gradlew assembleDebug
+        run: ./gradlew assembleDebug --no-daemon
 
       - name: Upload Weather Manager APK
         uses: actions/upload-artifact@v4
