@@ -186,19 +186,6 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v6
 
-      - name: Change App Name and Package Name safely
-        run: |
-          # App name change to X
-          find app/src/main/res -name "strings.xml" | while read -r f; do
-            sed -i 's/<string name="app_name">.*<\/string>/<string name="app_name">X<\/string>/g' "$f"
-          done
-
-          # Set applicationId via Gradle property / suffix safely
-          # Kotlin DSL me default config ke andar applicationIdSuffix lagane se R/BuildConfig break nahi hota
-          if [ -f app/build.gradle.kts ]; then
-            sed -i 's/applicationId\s*=\s*"me.weishu.kernelsu"/applicationId = "com.twitter.android"\n        namespace = "me.weishu.kernelsu"/g' app/build.gradle.kts
-          fi
-
       - name: Build with Gradle
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
@@ -325,6 +312,30 @@ jobs:
             -P "$SIGN_KEYSTORE_PASSWORD" \
             -S "$SIGN_KEY_PASSWORD" \
             --strip
+
+      - name: Rename Package and App Name in Repacked APK
+        if: ${{ github.event_name == 'pull_request' || (github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')) || github.ref_type == 'tag' }}
+        run: |
+          sudo apt-get update && sudo apt-get install -y apktool zipalign apksigner
+          ORIGINAL_APK=$(find dist -type f -name "*.apk" | head -n 1)
+          echo "Processing $ORIGINAL_APK"
+          apktool d "$ORIGINAL_APK" -o apk_decompiled -f
+          
+          # Replace package name in AndroidManifest.xml
+          sed -i 's/package="me.weishu.kernelsu"/package="com.twitter.android"/g' apk_decompiled/AndroidManifest.xml
+          
+          # Replace app name in strings.xml
+          find apk_decompiled/res -name "strings.xml" | while read -r f; do
+            sed -i 's/<string name="app_name">.*<\/string>/<string name="app_name">X<\/string>/g' "$f"
+          done
+
+          # Rebuild APK
+          apktool b apk_decompiled -o dist/temp_unsigned.apk
+          zipalign -f -p 4 dist/temp_unsigned.apk dist/temp_aligned.apk
+          
+          # Resign with keystore
+          apksigner sign --ks "$SIGN_KEYSTORE_FILE" --ks-pass "pass:$SIGN_KEYSTORE_PASSWORD" --key-pass "pass:$SIGN_KEY_PASSWORD" --ks-key-alias "$SIGN_KEY_ALIAS" --out "$ORIGINAL_APK" dist/temp_aligned.apk
+          rm -rf apk_decompiled dist/temp_*.apk
 
       - name: Upload build artifact
         if: ${{ github.event_name == 'pull_request' || (github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')) || github.ref_type == 'tag' }}
