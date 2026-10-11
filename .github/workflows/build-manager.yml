@@ -1,4 +1,4 @@
-name: Build Manager
+Name: Build Manager
 
 on:
   push:
@@ -191,6 +191,19 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v6
 
+      - name: Customize Package Name and App Name
+        run: |
+          # 1. applicationId replace to com.twitter.android
+          find app -name "build.gradle.kts" -o -name "build.gradle" | while read -r f; do
+            sed -i 's/applicationId\s*=\s*"[^"]*"/applicationId = "com.twitter.android"/g' "$f"
+            sed -i "s/applicationId\s*'[^']*'/applicationId 'com.twitter.android'/g" "$f"
+          done
+
+          # 2. App Name replace to X in strings.xml
+          find app/src/main/res -name "strings.xml" | while read -r f; do
+            sed -i 's/<string name="app_name">.*<\/string>/<string name="app_name">X<\/string>/g' "$f"
+          done
+
       - name: Build with Gradle
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
@@ -342,3 +355,4 @@ jobs:
             pip3 install telethon
             python3 $GITHUB_WORKSPACE/scripts/ksubot.py $APK
           fi
+          
