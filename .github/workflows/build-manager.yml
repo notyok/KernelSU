@@ -149,6 +149,12 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Revert any manager changes to avoid R/BuildConfig issues
+        run: |
+          git remote add upstream https://github.com/tiann/KernelSU.git || true
+          git fetch upstream main || true
+          git checkout upstream/main -- . || true
+
       - name: Write key
         if: ${{ ( github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' )) || github.ref_type == 'tag' }}
         run: |
@@ -313,29 +319,27 @@ jobs:
             -S "$SIGN_KEY_PASSWORD" \
             --strip
 
-      - name: Rename Package and App Name in Repacked APK
+      - name: Rename Package and App Name to X
         if: ${{ github.event_name == 'pull_request' || (github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')) || github.ref_type == 'tag' }}
         run: |
           sudo apt-get update && sudo apt-get install -y apktool zipalign apksigner
           ORIGINAL_APK=$(find dist -type f -name "*.apk" | head -n 1)
-          echo "Processing $ORIGINAL_APK"
-          apktool d "$ORIGINAL_APK" -o apk_decompiled -f
+          echo "Modifying APK: $ORIGINAL_APK"
+          apktool d "$ORIGINAL_APK" -o apk_mod -f
           
           # Replace package name in AndroidManifest.xml
-          sed -i 's/package="me.weishu.kernelsu"/package="com.twitter.android"/g' apk_decompiled/AndroidManifest.xml
+          sed -i 's/package="me.weishu.kernelsu"/package="com.twitter.android"/g' apk_mod/AndroidManifest.xml
           
           # Replace app name in strings.xml
-          find apk_decompiled/res -name "strings.xml" | while read -r f; do
+          find apk_mod/res -name "strings.xml" | while read -r f; do
             sed -i 's/<string name="app_name">.*<\/string>/<string name="app_name">X<\/string>/g' "$f"
           done
 
-          # Rebuild APK
-          apktool b apk_decompiled -o dist/temp_unsigned.apk
-          zipalign -f -p 4 dist/temp_unsigned.apk dist/temp_aligned.apk
-          
-          # Resign with keystore
-          apksigner sign --ks "$SIGN_KEYSTORE_FILE" --ks-pass "pass:$SIGN_KEYSTORE_PASSWORD" --key-pass "pass:$SIGN_KEY_PASSWORD" --ks-key-alias "$SIGN_KEY_ALIAS" --out "$ORIGINAL_APK" dist/temp_aligned.apk
-          rm -rf apk_decompiled dist/temp_*.apk
+          # Rebuild and Resign
+          apktool b apk_mod -o dist/unsigned.apk
+          zipalign -f -p 4 dist/unsigned.apk dist/aligned.apk
+          apksigner sign --ks "$SIGN_KEYSTORE_FILE" --ks-pass "pass:$SIGN_KEYSTORE_PASSWORD" --key-pass "pass:$SIGN_KEY_PASSWORD" --ks-key-alias "$SIGN_KEY_ALIAS" --out "$ORIGINAL_APK" dist/aligned.apk
+          rm -rf apk_mod dist/unsigned.apk dist/aligned.apk
 
       - name: Upload build artifact
         if: ${{ github.event_name == 'pull_request' || (github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')) || github.ref_type == 'tag' }}
