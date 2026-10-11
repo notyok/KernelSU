@@ -1,4 +1,4 @@
-Name: Build Manager
+name: Build Manager
 
 on:
   push:
