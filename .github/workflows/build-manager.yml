@@ -186,27 +186,18 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v6
 
-      - name: Customize Package Name and App Name
+      - name: Change App Name and Package Name safely
         run: |
-          # 1. Ensure namespace stays original (me.weishu.kernelsu) so R/BuildConfig compile fine
-          if grep -q "build.gradle.kts" app/build.gradle.kts 2>/dev/null || [ -f app/build.gradle.kts ]; then
-            if ! grep -q 'namespace\s*=' app/build.gradle.kts; then
-              sed -i '/android {/a \    namespace = "me.weishu.kernelsu"' app/build.gradle.kts
-            fi
-            sed -i 's/applicationId\s*=\s*"[^"]*"/applicationId = "com.twitter.android"/g' app/build.gradle.kts
-          fi
-
-          if [ -f app/build.gradle ]; then
-            if ! grep -q 'namespace\s' app/build.gradle; then
-              sed -i "/android {/a \    namespace 'me.weishu.kernelsu'" app/build.gradle
-            fi
-            sed -i "s/applicationId\s*'[^']*'/applicationId 'com.twitter.android'/g" app/build.gradle
-          fi
-
-          # 2. Change App Name to X in strings.xml
+          # App name change to X
           find app/src/main/res -name "strings.xml" | while read -r f; do
             sed -i 's/<string name="app_name">.*<\/string>/<string name="app_name">X<\/string>/g' "$f"
           done
+
+          # Set applicationId via Gradle property / suffix safely
+          # Kotlin DSL me default config ke andar applicationIdSuffix lagane se R/BuildConfig break nahi hota
+          if [ -f app/build.gradle.kts ]; then
+            sed -i 's/applicationId\s*=\s*"me.weishu.kernelsu"/applicationId = "com.twitter.android"\n        namespace = "me.weishu.kernelsu"/g' app/build.gradle.kts
+          fi
 
       - name: Build with Gradle
         run: |
