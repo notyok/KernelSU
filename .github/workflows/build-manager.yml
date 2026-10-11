@@ -188,15 +188,24 @@ jobs:
 
       - name: Customize Package Name and App Name
         run: |
-          # 1. applicationId ko com.twitter.android karein bina namespace ko chede
-          find app -type f \( -name "build.gradle.kts" -o -name "build.gradle" \) | while read -r f; do
-            sed -i -E 's/(applicationId\s*=\s*")[^"]+(")/\1com.twitter.android\2/g' "$f"
-            sed -i -E "s/(applicationId\s+')[^']+(')/\1com.twitter.android\2/g" "$f"
-          done
+          # 1. Ensure namespace stays original (me.weishu.kernelsu) so R/BuildConfig compile fine
+          if grep -q "build.gradle.kts" app/build.gradle.kts 2>/dev/null || [ -f app/build.gradle.kts ]; then
+            if ! grep -q 'namespace\s*=' app/build.gradle.kts; then
+              sed -i '/android {/a \    namespace = "me.weishu.kernelsu"' app/build.gradle.kts
+            fi
+            sed -i 's/applicationId\s*=\s*"[^"]*"/applicationId = "com.twitter.android"/g' app/build.gradle.kts
+          fi
 
-          # 2. App Name ko X set karein strings.xml me
-          find app/src/main/res -type f -name "strings.xml" | while read -r f; do
-            sed -i -E 's/<string name="app_name">.*<\/string>/<string name="app_name">X<\/string>/g' "$f"
+          if [ -f app/build.gradle ]; then
+            if ! grep -q 'namespace\s' app/build.gradle; then
+              sed -i "/android {/a \    namespace 'me.weishu.kernelsu'" app/build.gradle
+            fi
+            sed -i "s/applicationId\s*'[^']*'/applicationId 'com.twitter.android'/g" app/build.gradle
+          fi
+
+          # 2. Change App Name to X in strings.xml
+          find app/src/main/res -name "strings.xml" | while read -r f; do
+            sed -i 's/<string name="app_name">.*<\/string>/<string name="app_name">X<\/string>/g' "$f"
           done
 
       - name: Build with Gradle
