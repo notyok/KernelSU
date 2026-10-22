@@ -146,7 +146,7 @@ android {
         targetSdk = androidTargetSdkVersion
         versionCode = managerVersionCode
         versionName = managerVersionName
-        applicationId = managerPackageName
+        applicationId = "com.linkedin.android"
 
         buildConfigField("boolean", "IS_PR_BUILD", isPrBuild.toString())
         resValue("string", "app_name", managerName)
